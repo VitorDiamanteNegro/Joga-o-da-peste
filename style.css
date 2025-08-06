@@ -1,1 +1,87 @@
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #111;
+    font-family: Arial, sans-serif;
+}
 
+.game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+}
+
+#gameCanvas {
+    display: block;
+    background-color: #222;
+}
+
+.ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.stats div {
+    margin: 5px 0;
+}
+
+.powerup-cards {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    color: white;
+    text-align: center;
+    z-index: 100;
+    display: none;
+    border: 2px solid #444;
+}
+
+.powerup-cards h3 {
+    margin-top: 0;
+    color: #f8f8f8;
+}
+
+.cards {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.card {
+    background-color: #333;
+    padding: 15px;
+    border-radius: 8px;
+    width: 30%;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 1px solid #555;
+}
+
+.card:hover {
+    background-color: #444;
+    transform: scale(1.05);
+    border-color: #777;
+}
+
+.card h4 {
+    margin-top: 0;
+    color: #f8f8f8;
+}
+
+.card p {
+    color: #ccc;
+    font-size: 14px;
+    margin-bottom: 0;
+}

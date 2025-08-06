@@ -1,1 +1,41 @@
-
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zombie Survival</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="ui">
+            <div class="stats">
+                <div>Nível: <span id="level">1</span></div>
+                <div>XP: <span id="xp">0</span>/<span id="nextLevelXp">100</span></div>
+                <div>Vida: <span id="health">100</span></div>
+                <div>Onda: <span id="wave">1</span></div>
+                <div>Tempo: <span id="time">0:00</span></div>
+            </div>
+            <div class="powerup-cards" id="powerupCards">
+                <h3>Escolha um Poder (Nível <span id="powerupLevel">5</span>)</h3>
+                <div class="cards">
+                    <div class="card" data-power="lightning">
+                        <h4>Raio</h4>
+                        <p>Dano elétrico que atinge 3 zumbis próximos</p>
+                    </div>
+                    <div class="card" data-power="fire">
+                        <h4>Bola de Fogo</h4>
+                        <p>Atira bolas de fogo que queimam zumbis</p>
+                    </div>
+                    <div class="card" data-power="multishot">
+                        <h4>Tiro Triplo</h4>
+                        <p>Atira 3 projéteis de uma vez</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

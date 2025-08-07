@@ -2,8 +2,8 @@ body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background-color: #111;
-    font-family: 'Arial', sans-serif;
+    background-color: #000;
+    font-family: 'Arial Black', sans-serif;
     user-select: none;
 }
 
@@ -15,7 +15,7 @@ body {
 
 #gameCanvas {
     display: block;
-    background-color: #1a1a1a;
+    background-color: #111;
 }
 
 .ui {
@@ -26,75 +26,87 @@ body {
     background-color: rgba(0, 0, 0, 0.7);
     padding: 12px;
     border-radius: 8px;
-    font-size: 16px;
-    border: 1px solid #444;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    font-size: 14px;
+    border: 2px solid #444;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
 }
 
 .stats div {
     margin: 6px 0;
     font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 5px #f00;
+}
+
+.powerup-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
 }
 
 .powerup-cards {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: rgba(0, 0, 0, 0.95);
-    padding: 25px;
-    border-radius: 12px;
-    color: white;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    padding: 30px;
+    border-radius: 15px;
     text-align: center;
-    z-index: 100;
-    display: none;
-    border: 2px solid #555;
-    box-shadow: 0 0 20px rgba(0, 100, 255, 0.5);
-    width: 80%;
-    max-width: 600px;
+    max-width: 800px;
+    width: 90%;
+    border: 3px solid #4a4a8a;
+    box-shadow: 0 0 30px rgba(100, 100, 255, 0.5);
 }
 
 .powerup-cards h3 {
-    margin-top: 0;
-    color: #4af;
-    font-size: 24px;
-    text-shadow: 0 0 5px rgba(0, 100, 255, 0.5);
+    color: #f8f8f8;
+    font-size: 28px;
+    margin-bottom: 30px;
+    text-shadow: 0 0 10px #4af;
 }
 
 .cards {
     display: flex;
     justify-content: center;
-    margin-top: 20px;
     gap: 20px;
     flex-wrap: wrap;
 }
 
 .card {
-    background: linear-gradient(to bottom, #222, #111);
+    background: linear-gradient(145deg, #2a2a4a, #1e1e3a);
     padding: 20px;
-    border-radius: 10px;
-    width: 160px;
+    border-radius: 12px;
+    width: 200px;
     cursor: pointer;
     transition: all 0.3s;
-    border: 1px solid #444;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    border: 2px solid #4a4a8a;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
 .card:hover {
-    background: linear-gradient(to bottom, #333, #222);
-    transform: scale(1.05);
-    border-color: #4af;
-    box-shadow: 0 0 15px rgba(0, 100, 255, 0.5);
+    transform: translateY(-10px) scale(1.05);
+    box-shadow: 0 10px 25px rgba(100, 100, 255, 0.4);
+    border-color: #6a6aff;
+    background: linear-gradient(145deg, #3a3a5a, #2e2e4a);
+}
+
+.card .icon {
+    font-size: 40px;
+    margin-bottom: 15px;
 }
 
 .card h4 {
-    margin-top: 0;
-    color: #4af;
-    font-size: 18px;
+    margin: 0 0 10px 0;
+    color: #6af;
+    font-size: 20px;
 }
 
 .card p {
     color: #ccc;
     font-size: 14px;
-    margin-bottom: 0;
+    margin: 0;
 }

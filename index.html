@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zombie Survival</title>
+    <title>Zumbi Apocalipse</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,32 +15,33 @@
                 <div>XP: <span id="xp">0</span>/<span id="nextLevelXp">100</span></div>
                 <div>Vida: <span id="health">100</span></div>
                 <div>Onda: <span id="wave">1</span></div>
+                <div>Zumbis: <span id="zombieCount">0</span></div>
                 <div>Tempo: <span id="time">0:00</span></div>
             </div>
-            <div class="powerup-cards" id="powerupCards">
-                <h3>Escolha um Poder (Nível <span id="powerupLevel">5</span>)</h3>
-                <div class="cards">
-                    <div class="card" data-power="lightning">
-                        <h4>Raio</h4>
-                        <p>Dano elétrico que atinge 3 zumbis próximos</p>
-                    </div>
-                    <div class="card" data-power="fire">
-                        <h4>Bola de Fogo</h4>
-                        <p>Atira bolas de fogo que queimam zumbis</p>
-                    </div>
-                    <div class="card" data-power="multishot">
-                        <h4>Tiro Triplo</h4>
-                        <p>Atira 3 projéteis de uma vez</p>
+            <div class="powerup-screen" id="powerupScreen">
+                <div class="powerup-cards">
+                    <h3>ESCOLHA SEU PODER <span id="powerupLevel">5</span></h3>
+                    <div class="cards">
+                        <div class="card" data-power="lightning">
+                            <div class="icon">⚡</div>
+                            <h4>Raio Mortal</h4>
+                            <p>Dano elétrico que atinge vários zumbis</p>
+                        </div>
+                        <div class="card" data-power="fire">
+                            <div class="icon">🔥</div>
+                            <h4>Inferno</h4>
+                            <p>Bolas de fogo que queimam grupos</p>
+                        </div>
+                        <div class="card" data-power="multishot">
+                            <div class="icon">🎯</div>
+                            <h4>Rajada</h4>
+                            <p>Dispara em múltiplos alvos</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Sprites pré-carregadas -->
-    <img id="playerSprite" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjQwIiBmaWxsPSIjMDA3N2ZmIi8+PGNpcmNsZSBjeD0iMTAwIiBjeT0iODAiIHI9IjIwIiBmaWxsPSIjZmZmZmZmIi8+PHBhdGggZD0iTTcwIDEyMEgxMzBNODAgMTQwSDEyMCIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjgiLz48L3N2Zz4=" style="display:none;">
-    <img id="zombieSprite" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjQwIiBmaWxsPSIjMDBhYTAwIi8+PGNpcmNsZSBjeD0iMTAwIiBjeT0iODAiIHI9IjIwIiBmaWxsPSIjODhlZThlIi8+PHBhdGggZD0iTTcwIDEyMEgxMzBNODAgMTQwSDEyMCIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjgiLz48L3N2Zz4=" style="display:none;">
-    <img id="fireballSprite" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjQwIiBmaWxsPSIjZmY2NjAwIi8+PC9zdmc+" style="display:none;">
 
     <script src="script.js"></script>
 </body>

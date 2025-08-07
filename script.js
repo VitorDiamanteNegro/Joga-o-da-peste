@@ -1,10 +1,10 @@
 // Constantes do jogo
-const PLAYER_SIZE = 20;
-const ZOMBIE_SIZE = 16;
-const XP_ORB_SIZE = 5;
-const BULLET_SIZE = 4;
-const FIREBALL_SIZE = 8;
-const LIGHTNING_RADIUS = 100;
+const PLAYER_SIZE = 40;
+const ZOMBIE_SIZE = 32;
+const XP_ORB_SIZE = 8;
+const BULLET_SIZE = 6;
+const FIREBALL_SIZE = 16;
+const LIGHTNING_RADIUS = 120;
 
 // Variáveis do jogo
 let canvas, ctx;
@@ -22,7 +22,8 @@ let player = {
         multishot: false,
         fire: false,
         lightning: false
-    }
+    },
+    direction: 0 // Ângulo em radianos
 };
 let zombies = [];
 let xpOrbs = [];
@@ -43,11 +44,17 @@ let mouse = { x: 0, y: 0, clicked: false };
 let lastShot = 0;
 let shootDelay = 300;
 let gameOver = false;
+let gamePaused = false;
+let spritesLoaded = false;
+let playerSprite, zombieSprite, fireballSprite;
 
 // Inicializa o jogo
 function init() {
     canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
+    
+    // Carrega sprites
+    loadSprites();
     
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
@@ -65,7 +72,26 @@ function init() {
         card.addEventListener('click', selectPowerup);
     });
     
-    gameLoop();
+    // Inicia o loop do jogo
+    requestAnimationFrame(gameLoop);
+}
+
+function loadSprites() {
+    playerSprite = document.getElementById('playerSprite');
+    zombieSprite = document.getElementById('zombieSprite');
+    fireballSprite = document.getElementById('fireballSprite');
+    
+    // Verifica se as sprites estão carregadas
+    spritesLoaded = playerSprite.complete && zombieSprite.complete && fireballSprite.complete;
+    
+    if (!spritesLoaded) {
+        const checkSprites = setInterval(() => {
+            if (playerSprite.complete && zombieSprite.complete && fireballSprite.complete) {
+                spritesLoaded = true;
+                clearInterval(checkSprites);
+            }
+        }, 100);
+    }
 }
 
 function resizeCanvas() {
@@ -74,6 +100,7 @@ function resizeCanvas() {
 }
 
 function handleKeyDown(e) {
+    if (gamePaused) return;
     keys[e.key.toLowerCase()] = true;
 }
 
@@ -85,10 +112,13 @@ function handleMouseMove(e) {
     const rect = canvas.getBoundingClientRect();
     mouse.x = e.clientX - rect.left + cameraOffset.x;
     mouse.y = e.clientY - rect.top + cameraOffset.y;
+    
+    // Atualiza direção do jogador
+    player.direction = Math.atan2(mouse.y - player.y, mouse.x - player.x);
 }
 
 function handleMouseDown(e) {
-    if (e.button === 0) {
+    if (e.button === 0 && !gamePaused) {
         mouse.clicked = true;
         shoot();
     }
@@ -105,13 +135,17 @@ function gameLoop(timestamp = 0) {
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    update(timestamp);
+    if (!gamePaused) {
+        update(timestamp);
+    }
+    
     draw();
     
     requestAnimationFrame(gameLoop);
 }
 
 function update(timestamp) {
+    // Movimento do jogador
     const moveX = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0);
     const moveY = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0);
     
@@ -122,15 +156,19 @@ function update(timestamp) {
     player.x += normalizedX * player.speed;
     player.y += normalizedY * player.speed;
     
+    // Atualiza offset da câmera (mapa infinito)
     cameraOffset.x = player.x - canvas.width / 2;
     cameraOffset.y = player.y - canvas.height / 2;
     
+    // Spawn de zumbis
     if (timestamp - lastZombieSpawn > zombieSpawnRate && zombies.length < zombiesPerWave * 2) {
         spawnZombie();
         lastZombieSpawn = timestamp;
     }
     
+    // Atualiza zumbis
     zombies.forEach(zombie => {
+        // Move zumbi em direção ao jogador
         const dx = player.x - zombie.x;
         const dy = player.y - zombie.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -138,11 +176,13 @@ function update(timestamp) {
         if (distance > 0) {
             zombie.x += (dx / distance) * zombie.speed;
             zombie.y += (dy / distance) * zombie.speed;
+            zombie.direction = Math.atan2(dy, dx);
         }
         
+        // Verifica colisão com o jogador
         if (distance < PLAYER_SIZE / 2 + ZOMBIE_SIZE / 2) {
             player.health -= 0.5;
-            zombie.x -= (dx / distance) * 5;
+            zombie.x -= (dx / distance) * 5; // Empurra o zumbi
             zombie.y -= (dy / distance) * 5;
             
             if (player.health <= 0) {
@@ -156,13 +196,16 @@ function update(timestamp) {
         }
     });
     
+    // Remove zumbis mortos
     zombies = zombies.filter(zombie => zombie.health > 0);
     
+    // Atualiza projéteis
     bullets.forEach(bullet => {
         bullet.x += bullet.dx * bullet.speed;
         bullet.y += bullet.dy * bullet.speed;
         bullet.lifetime -= 16;
         
+        // Verifica colisão com zumbis
         for (let i = 0; i < zombies.length; i++) {
             const zombie = zombies[i];
             const dx = zombie.x - bullet.x;
@@ -183,6 +226,7 @@ function update(timestamp) {
                     }
                 }
                 
+                // Efeito de raio
                 if (bullet.isLightning) {
                     lightningStrike(zombie.x, zombie.y);
                 }
@@ -192,13 +236,16 @@ function update(timestamp) {
         }
     });
     
+    // Remove projéteis expirados
     bullets = bullets.filter(bullet => bullet.lifetime > 0);
     
+    // Atualiza bolas de fogo
     fireballs.forEach(fireball => {
         fireball.x += fireball.dx * fireball.speed;
         fireball.y += fireball.dy * fireball.speed;
         fireball.lifetime -= 16;
         
+        // Verifica colisão com zumbis
         for (let i = 0; i < zombies.length; i++) {
             const zombie = zombies[i];
             const dx = zombie.x - fireball.x;
@@ -226,8 +273,10 @@ function update(timestamp) {
         }
     });
     
+    // Remove bolas de fogo expiradas
     fireballs = fireballs.filter(fireball => fireball.lifetime > 0);
     
+    // Atualiza zumbis queimando
     zombies.forEach(zombie => {
         if (zombie.burning) {
             zombie.burnTime -= 16;
@@ -249,10 +298,12 @@ function update(timestamp) {
         }
     });
     
+    // Atualiza raios
     lightningStrikes.forEach(lightning => {
         lightning.lifetime -= 16;
         
         if (lightning.lifetime <= 0) {
+            // Dano em área
             zombies.forEach(zombie => {
                 const dx = zombie.x - lightning.x;
                 const dy = zombie.y - lightning.y;
@@ -275,9 +326,12 @@ function update(timestamp) {
         }
     });
     
+    // Remove raios expirados
     lightningStrikes = lightningStrikes.filter(lightning => lightning.lifetime > 0);
     
+    // Atualiza orbes de XP
     xpOrbs.forEach((orb, index) => {
+        // Move em direção ao jogador se estiver perto
         const dx = player.x - orb.x;
         const dy = player.y - orb.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -287,6 +341,7 @@ function update(timestamp) {
             orb.y += (dy / distance) * 2;
         }
         
+        // Verifica colisão com o jogador
         if (distance < PLAYER_SIZE / 2 + XP_ORB_SIZE / 2) {
             player.xp += orb.value;
             xpOrbs.splice(index, 1);
@@ -297,88 +352,138 @@ function update(timestamp) {
         }
     });
     
-    gameTime += 16;
-    updateUI();
-    
-    if (gameTime - lastWaveIncrease > 240000) {
-        wave++;
-        lastWaveIncrease = gameTime;
-        zombiesPerWave += 2;
-        zombieSpeed += 0.2;
-        zombieHealth += 5;
-        zombieSpawnRate = Math.max(200, zombieSpawnRate - 100);
+    // Atualiza tempo e dificuldade
+    if (!gamePaused) {
+        gameTime += 16;
+        
+        // Aumenta dificuldade a cada 4 minutos
+        if (gameTime - lastWaveIncrease > 240000) {
+            wave++;
+            lastWaveIncrease = gameTime;
+            zombiesPerWave += 2;
+            zombieSpeed += 0.2;
+            zombieHealth += 5;
+            zombieSpawnRate = Math.max(200, zombieSpawnRate - 100);
+        }
     }
+    
+    updateUI();
 }
 
 function draw() {
     ctx.save();
     ctx.translate(-cameraOffset.x, -cameraOffset.y);
     
+    // Desenha orbes de XP
     xpOrbs.forEach(orb => {
         ctx.beginPath();
         ctx.arc(orb.x, orb.y, XP_ORB_SIZE, 0, Math.PI * 2);
-        ctx.fillStyle = 'white';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         ctx.fill();
+        ctx.shadowColor = 'white';
+        ctx.shadowBlur = 10;
     });
     
+    // Desenha zumbis
     zombies.forEach(zombie => {
-        ctx.beginPath();
-        ctx.arc(zombie.x, zombie.y, ZOMBIE_SIZE, 0, Math.PI * 2);
-        ctx.fillStyle = zombie.burning ? '#ff6600' : '#00aa00';
-        ctx.fill();
+        if (spritesLoaded) {
+            ctx.save();
+            ctx.translate(zombie.x, zombie.y);
+            ctx.rotate(zombie.direction);
+            ctx.drawImage(zombieSprite, -ZOMBIE_SIZE, -ZOMBIE_SIZE, ZOMBIE_SIZE * 2, ZOMBIE_SIZE * 2);
+            ctx.restore();
+        } else {
+            ctx.beginPath();
+            ctx.arc(zombie.x, zombie.y, ZOMBIE_SIZE, 0, Math.PI * 2);
+            ctx.fillStyle = zombie.burning ? '#ff6600' : '#00aa00';
+            ctx.fill();
+        }
         
+        // Barra de vida
         const healthPercent = zombie.health / zombie.maxHealth;
-        ctx.fillStyle = 'red';
-        ctx.fillRect(zombie.x - ZOMBIE_SIZE, zombie.y - ZOMBIE_SIZE - 8, ZOMBIE_SIZE * 2, 3);
-        ctx.fillStyle = 'green';
-        ctx.fillRect(zombie.x - ZOMBIE_SIZE, zombie.y - ZOMBIE_SIZE - 8, ZOMBIE_SIZE * 2 * healthPercent, 3);
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+        ctx.fillRect(zombie.x - ZOMBIE_SIZE, zombie.y - ZOMBIE_SIZE - 10, ZOMBIE_SIZE * 2, 5);
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+        ctx.fillRect(zombie.x - ZOMBIE_SIZE, zombie.y - ZOMBIE_SIZE - 10, ZOMBIE_SIZE * 2 * healthPercent, 5);
     });
     
+    // Desenha projéteis
     bullets.forEach(bullet => {
         ctx.beginPath();
         ctx.arc(bullet.x, bullet.y, BULLET_SIZE, 0, Math.PI * 2);
-        ctx.fillStyle = 'yellow';
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
         ctx.fill();
     });
     
+    // Desenha bolas de fogo
     fireballs.forEach(fireball => {
-        ctx.beginPath();
-        ctx.arc(fireball.x, fireball.y, FIREBALL_SIZE, 0, Math.PI * 2);
-        ctx.fillStyle = '#ff6600';
-        ctx.fill();
-    });
-    
-    lightningStrikes.forEach(lightning => {
-        if (lightning.lifetime > 0) {
+        if (spritesLoaded) {
+            ctx.drawImage(fireballSprite, fireball.x - FIREBALL_SIZE, fireball.y - FIREBALL_SIZE, FIREBALL_SIZE * 2, FIREBALL_SIZE * 2);
+        } else {
             ctx.beginPath();
-            ctx.arc(lightning.x, lightning.y, LIGHTNING_RADIUS * (1 - lightning.lifetime / 500), 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(100, 200, 255, 0.3)';
+            ctx.arc(fireball.x, fireball.y, FIREBALL_SIZE, 0, Math.PI * 2);
+            ctx.fillStyle = '#ff6600';
             ctx.fill();
         }
     });
     
+    // Desenha raios
+    lightningStrikes.forEach(lightning => {
+        if (lightning.lifetime > 0) {
+            const radius = LIGHTNING_RADIUS * (1 - lightning.lifetime / 500);
+            const gradient = ctx.createRadialGradient(
+                lightning.x, lightning.y, 0,
+                lightning.x, lightning.y, radius
+            );
+            gradient.addColorStop(0, 'rgba(100, 200, 255, 0.8)');
+            gradient.addColorStop(1, 'rgba(100, 200, 255, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(lightning.x, lightning.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+        }
+    });
+    
+    // Desenha jogador
+    if (spritesLoaded) {
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        ctx.rotate(player.direction);
+        ctx.drawImage(playerSprite, -PLAYER_SIZE, -PLAYER_SIZE, PLAYER_SIZE * 2, PLAYER_SIZE * 2);
+        ctx.restore();
+    } else {
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, PLAYER_SIZE, 0, Math.PI * 2);
+        ctx.fillStyle = 'blue';
+        ctx.fill();
+    }
+    
+    // Barra de vida do jogador
+    const healthPercent = player.health / player.maxHealth;
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+    ctx.fillRect(player.x - PLAYER_SIZE, player.y - PLAYER_SIZE - 15, PLAYER_SIZE * 2, 8);
+    ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+    ctx.fillRect(player.x - PLAYER_SIZE, player.y - PLAYER_SIZE - 15, PLAYER_SIZE * 2 * healthPercent, 8);
+    
+    // Sombra do jogador
     ctx.beginPath();
-    ctx.arc(player.x, player.y, PLAYER_SIZE / 2, 0, Math.PI * 2);
-    ctx.fillStyle = 'blue';
+    ctx.ellipse(player.x, player.y + PLAYER_SIZE + 5, PLAYER_SIZE * 0.8, PLAYER_SIZE * 0.3, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.fill();
     
-    const healthPercent = player.health / player.maxHealth;
-    ctx.fillStyle = 'red';
-    ctx.fillRect(player.x - PLAYER_SIZE, player.y - PLAYER_SIZE - 8, PLAYER_SIZE * 2, 5);
-    ctx.fillStyle = 'green';
-    ctx.fillRect(player.x - PLAYER_SIZE, player.y - PLAYER_SIZE - 8, PLAYER_SIZE * 2 * healthPercent, 5);
-    
-    const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-    const indicatorX = player.x + Math.cos(angle) * PLAYER_SIZE;
-    const indicatorY = player.y + Math.sin(angle) * PLAYER_SIZE;
-    ctx.beginPath();
-    ctx.moveTo(player.x, player.y);
-    ctx.lineTo(indicatorX, indicatorY);
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    
     ctx.restore();
+    
+    // Efeito de pausa quando selecionando poder
+    if (gamePaused) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = 'white';
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Selecione um poder para continuar', canvas.width / 2, canvas.height / 2 - 100);
+    }
 }
 
 function spawnZombie() {
@@ -387,19 +492,19 @@ function spawnZombie() {
     const spawnDistance = Math.max(canvas.width, canvas.height) * 0.7;
     
     switch (edge) {
-        case 0:
+        case 0: // Topo
             x = player.x + (Math.random() - 0.5) * canvas.width;
             y = player.y - spawnDistance;
             break;
-        case 1:
+        case 1: // Direita
             x = player.x + spawnDistance;
             y = player.y + (Math.random() - 0.5) * canvas.height;
             break;
-        case 2:
+        case 2: // Baixo
             x = player.x + (Math.random() - 0.5) * canvas.width;
             y = player.y + spawnDistance;
             break;
-        case 3:
+        case 3: // Esquerda
             x = player.x - spawnDistance;
             y = player.y + (Math.random() - 0.5) * canvas.height;
             break;
@@ -412,7 +517,8 @@ function spawnZombie() {
         health: zombieHealth,
         maxHealth: zombieHealth,
         burning: false,
-        burnTime: 0
+        burnTime: 0,
+        direction: 0
     });
 }
 
@@ -425,13 +531,16 @@ function spawnXpOrb(x, y, value) {
 }
 
 function shoot() {
+    if (gamePaused) return;
+    
     const now = Date.now();
     if (now - lastShot < shootDelay) return;
     lastShot = now;
     
-    const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+    const angle = player.direction;
     
     if (player.powers.multishot) {
+        // Tiro triplo
         for (let i = -1; i <= 1; i++) {
             const spreadAngle = angle + i * 0.2;
             bullets.push({
@@ -445,6 +554,7 @@ function shoot() {
             });
         }
     } else if (player.powers.fire) {
+        // Bola de fogo
         fireballs.push({
             x: player.x,
             y: player.y,
@@ -455,13 +565,14 @@ function shoot() {
             lifetime: 1200
         });
     } else {
+        // Tiro normal ou de raio
         bullets.push({
             x: player.x,
             y: player.y,
             dx: Math.cos(angle),
             dy: Math.sin(angle),
             speed: 7,
-            damage: 15,
+            damage: player.powers.lightning ? 20 : 15,
             lifetime: 1000,
             isLightning: player.powers.lightning
         });
@@ -482,15 +593,16 @@ function levelUp() {
     player.xp -= player.nextLevelXp;
     player.nextLevelXp = Math.floor(player.nextLevelXp * 1.2);
     
+    // A cada 5 níveis, mostra seleção de poder
     if (player.level % 5 === 0) {
         showPowerupCards();
     }
 }
 
 function showPowerupCards() {
+    gamePaused = true;
     document.getElementById('powerupLevel').textContent = player.level;
     document.getElementById('powerupCards').style.display = 'block';
-    zombieSpawnRate = 999999;
 }
 
 function selectPowerup(e) {
@@ -509,7 +621,7 @@ function selectPowerup(e) {
     }
     
     document.getElementById('powerupCards').style.display = 'none';
-    zombieSpawnRate = 1000 - (wave * 100);
+    gamePaused = false;
 }
 
 function updateUI() {
@@ -539,7 +651,8 @@ function resetGame() {
             multishot: false,
             fire: false,
             lightning: false
-        }
+        },
+        direction: 0
     };
     zombies = [];
     xpOrbs = [];
@@ -554,9 +667,10 @@ function resetGame() {
     zombiesPerWave = 5;
     zombieSpawnRate = 1000;
     gameOver = false;
+    gamePaused = false;
     
     document.getElementById('powerupCards').style.display = 'none';
 }
 
-// Inicia o jogo
+// Inicia o jogo quando a página carrega
 window.onload = init;

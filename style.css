@@ -3,7 +3,8 @@ body {
     padding: 0;
     overflow: hidden;
     background-color: #111;
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
+    user-select: none;
 }
 
 .game-container {
@@ -14,7 +15,7 @@ body {
 
 #gameCanvas {
     display: block;
-    background-color: #222;
+    background-color: #1a1a1a;
 }
 
 .ui {
@@ -22,14 +23,17 @@ body {
     top: 10px;
     left: 10px;
     color: white;
-    background-color: rgba(0, 0, 0, 0.5);
-    padding: 10px;
-    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 12px;
+    border-radius: 8px;
     font-size: 16px;
+    border: 1px solid #444;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 .stats div {
-    margin: 5px 0;
+    margin: 6px 0;
+    font-weight: bold;
 }
 
 .powerup-cards {
@@ -37,47 +41,56 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: rgba(0, 0, 0, 0.9);
-    padding: 20px;
-    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.95);
+    padding: 25px;
+    border-radius: 12px;
     color: white;
     text-align: center;
     z-index: 100;
     display: none;
-    border: 2px solid #444;
+    border: 2px solid #555;
+    box-shadow: 0 0 20px rgba(0, 100, 255, 0.5);
+    width: 80%;
+    max-width: 600px;
 }
 
 .powerup-cards h3 {
     margin-top: 0;
-    color: #f8f8f8;
+    color: #4af;
+    font-size: 24px;
+    text-shadow: 0 0 5px rgba(0, 100, 255, 0.5);
 }
 
 .cards {
     display: flex;
-    justify-content: space-around;
+    justify-content: center;
     margin-top: 20px;
-    gap: 10px;
+    gap: 20px;
+    flex-wrap: wrap;
 }
 
 .card {
-    background-color: #333;
-    padding: 15px;
-    border-radius: 8px;
-    width: 30%;
+    background: linear-gradient(to bottom, #222, #111);
+    padding: 20px;
+    border-radius: 10px;
+    width: 160px;
     cursor: pointer;
     transition: all 0.3s;
-    border: 1px solid #555;
+    border: 1px solid #444;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 .card:hover {
-    background-color: #444;
+    background: linear-gradient(to bottom, #333, #222);
     transform: scale(1.05);
-    border-color: #777;
+    border-color: #4af;
+    box-shadow: 0 0 15px rgba(0, 100, 255, 0.5);
 }
 
 .card h4 {
     margin-top: 0;
-    color: #f8f8f8;
+    color: #4af;
+    font-size: 18px;
 }
 
 .card p {

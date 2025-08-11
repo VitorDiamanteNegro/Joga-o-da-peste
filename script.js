@@ -50,6 +50,17 @@ function initGame() {
     // Inicia o jogo
     gameRunning = true;
     startWave();
+    
+    // Inicia o loop do jogo
+    requestAnimationFrame(gameLoop);
+}
+
+// Loop principal do jogo
+function gameLoop() {
+    if (gameRunning && !gameOver) {
+        update();
+        requestAnimationFrame(gameLoop);
+    }
 }
 
 // Atualiza estatísticas na tela
@@ -182,13 +193,16 @@ function update() {
         if (bullet.x < 0 || bullet.x > window.innerWidth || 
             bullet.y < 0 || bullet.y > window.innerHeight) {
             bullets.splice(i, 1);
-            document.querySelectorAll('.bullet')[i].remove();
+            document.querySelectorAll('.bullet')[i]?.remove();
             continue;
         }
         
         // Atualiza posição da bala na tela
-        document.querySelectorAll('.bullet')[i].style.left = `${bullet.x}px`;
-        document.querySelectorAll('.bullet')[i].style.top = `${bullet.y}px`;
+        const bulletElements = document.querySelectorAll('.bullet');
+        if (bulletElements[i]) {
+            bulletElements[i].style.left = `${bullet.x}px`;
+            bulletElements[i].style.top = `${bullet.y}px`;
+        }
         
         // Verifica colisão com zumbis
         for (let j = zombies.length - 1; j >= 0; j--) {
@@ -199,14 +213,14 @@ function update() {
                 // Remove zumbi se a vida acabar
                 if (zombie.health <= 0) {
                     zombies.splice(j, 1);
-                    document.querySelectorAll('.zombie')[j].remove();
+                    document.querySelectorAll('.zombie')[j]?.remove();
                     kills++;
                     updateStats();
                 }
                 
                 // Remove a bala
                 bullets.splice(i, 1);
-                document.querySelectorAll('.bullet')[i].remove();
+                document.querySelectorAll('.bullet')[i]?.remove();
                 break;
             }
         }
@@ -226,8 +240,11 @@ function update() {
         zombie.y += (dy / distance) * zombie.speed;
         
         // Atualiza posição do zumbi na tela
-        document.querySelectorAll('.zombie')[i].style.left = `${zombie.x}px`;
-        document.querySelectorAll('.zombie')[i].style.top = `${zombie.y}px`;
+        const zombieElements = document.querySelectorAll('.zombie');
+        if (zombieElements[i]) {
+            zombieElements[i].style.left = `${zombie.x}px`;
+            zombieElements[i].style.top = `${zombie.y}px`;
+        }
         
         // Verifica colisão com o jogador
         if (checkCollision(player, zombie)) {
@@ -248,9 +265,6 @@ function update() {
         updateStats();
         startWave();
     }
-    
-    // Continua o loop de atualização
-    requestAnimationFrame(update);
 }
 
 // Verifica colisão entre dois objetos
@@ -282,7 +296,6 @@ document.addEventListener('mousedown', shoot);
 startButton.addEventListener('click', () => {
     startScreen.style.display = 'none';
     initGame();
-    update();
 });
 
 restartButton.addEventListener('click', () => {
@@ -290,8 +303,8 @@ restartButton.addEventListener('click', () => {
     document.querySelectorAll('.zombie').forEach(z => z.remove());
     document.querySelectorAll('.bullet').forEach(b => b.remove());
     
+    gameOverElement.style.display = 'none';
     initGame();
-    update();
 });
 
 // Inicia a tela inicial

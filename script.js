@@ -13,7 +13,7 @@ let bullets = [];
 let keys = {};
 let wave = 1;
 let kills = 0;
-let gameRunning = false;
+let gameRunning = true;
 let zombieSpawnInterval;
 let gameOver = false;
 
@@ -23,8 +23,6 @@ const healthElement = document.getElementById('health');
 const waveElement = document.getElementById('wave');
 const killsElement = document.getElementById('kills');
 const gameOverElement = document.getElementById('game-over');
-const startScreen = document.getElementById('start-screen');
-const startButton = document.getElementById('start-button');
 const restartButton = document.getElementById('restart');
 
 // Inicialização do jogo
@@ -293,11 +291,6 @@ document.addEventListener('keyup', (e) => {
 
 document.addEventListener('mousedown', shoot);
 
-startButton.addEventListener('click', () => {
-    startScreen.style.display = 'none';
-    initGame();
-});
-
 restartButton.addEventListener('click', () => {
     // Remove todos os zumbis e balas
     document.querySelectorAll('.zombie').forEach(z => z.remove());
@@ -307,5 +300,5 @@ restartButton.addEventListener('click', () => {
     initGame();
 });
 
-// Inicia a tela inicial
-startScreen.style.display = 'flex';
+// Inicia o jogo automaticamente quando a página carrega
+window.addEventListener('load', initGame);

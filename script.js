@@ -1,712 +1,298 @@
-// Configurações do jogo
-const PLAYER_SIZE = 40;
-const ZOMBIE_SIZE = 35;
-const XP_ORB_SIZE = 10;
-const BULLET_SIZE = 8;
-const FIREBALL_SIZE = 20;
-const LIGHTNING_RADIUS = 150;
-
 // Variáveis do jogo
-let canvas, ctx;
 let player = {
-    x: 0,
-    y: 0,
-    speed: 3.5,
-    health: 100,
-    maxHealth: 100,
-    level: 1,
-    xp: 0,
-    nextLevelXp: 100,
-    kills: 0,
-    powers: {
-        multishot: false,
-        fire: false,
-        lightning: false
-    },
-    direction: 0
+    x: 400,
+    y: 300,
+    width: 40,
+    height: 40,
+    speed: 5,
+    health: 100
 };
-let zombies = [];
-let xpOrbs = [];
-let bullets = [];
-let fireballs = [];
-let lightningStrikes = [];
-let lastZombieSpawn = 0;
-let zombieSpawnRate = 800;
-let zombieSpeed = 1.2;
-let zombieHealth = 40;
-let zombiesPerWave = 15;
-let wave = 1;
-let gameTime = 0;
-let lastWaveIncrease = 0;
-let cameraOffset = { x: 0, y: 0 };
-let keys = {};
-let mouse = { x: 0, y: 0, clicked: false };
-let lastShot = 0;
-let shootDelay = 250;
-let gameOver = false;
-let gamePaused = false;
 
-// Inicialização
-function init() {
-    canvas = document.getElementById('gameCanvas');
-    ctx = canvas.getContext('2d');
+let zombies = [];
+let bullets = [];
+let keys = {};
+let wave = 1;
+let kills = 0;
+let gameRunning = false;
+let zombieSpawnInterval;
+let gameOver = false;
+
+// Elementos do DOM
+const playerElement = document.getElementById('player');
+const healthElement = document.getElementById('health');
+const waveElement = document.getElementById('wave');
+const killsElement = document.getElementById('kills');
+const gameOverElement = document.getElementById('game-over');
+const startScreen = document.getElementById('start-screen');
+const startButton = document.getElementById('start-button');
+const restartButton = document.getElementById('restart');
+
+// Inicialização do jogo
+function initGame() {
+    // Posiciona o jogador no centro
+    player.x = window.innerWidth / 2 - player.width / 2;
+    player.y = window.innerHeight / 2 - player.height / 2;
+    player.health = 100;
     
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    // Limpa zumbis e balas
+    zombies = [];
+    bullets = [];
     
-    player.x = canvas.width / 2;
-    player.y = canvas.height / 2;
+    // Reseta estatísticas
+    wave = 1;
+    kills = 0;
+    gameOver = false;
     
-    // Controles
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('mousedown', handleMouseDown);
-    canvas.addEventListener('mouseup', handleMouseUp);
-    
-    // Seleção de poderes
-    document.querySelectorAll('.card').forEach(card => {
-        card.addEventListener('click', selectPowerup);
-    });
+    // Atualiza UI
+    updateStats();
+    gameOverElement.style.display = 'none';
     
     // Inicia o jogo
-    gameLoop();
+    gameRunning = true;
+    startWave();
 }
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+// Atualiza estatísticas na tela
+function updateStats() {
+    healthElement.textContent = `Vida: ${player.health}`;
+    waveElement.textContent = `Onda: ${wave}`;
+    killsElement.textContent = `Zumbis Mortos: ${kills}`;
 }
 
-// Controles
-function handleKeyDown(e) {
-    if (!gamePaused) keys[e.key.toLowerCase()] = true;
-}
-
-function handleKeyUp(e) {
-    keys[e.key.toLowerCase()] = false;
-}
-
-function handleMouseMove(e) {
-    const rect = canvas.getBoundingClientRect();
-    mouse.x = e.clientX - rect.left + cameraOffset.x;
-    mouse.y = e.clientY - rect.top + cameraOffset.y;
-    player.direction = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-}
-
-function handleMouseDown(e) {
-    if (e.button === 0 && !gamePaused) {
-        mouse.clicked = true;
-        shoot();
-    }
-}
-
-function handleMouseUp(e) {
-    if (e.button === 0) mouse.clicked = false;
-}
-
-// Loop principal
-function gameLoop(timestamp = 0) {
-    if (gameOver) return;
-    
-    // Limpa o canvas corretamente
-    ctx.fillStyle = '#111';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    if (!gamePaused) {
-        update(timestamp);
+// Inicia uma nova onda de zumbis
+function startWave() {
+    // Limpa qualquer intervalo anterior
+    if (zombieSpawnInterval) {
+        clearInterval(zombieSpawnInterval);
     }
     
-    draw();
+    // Define o número de zumbis baseado na onda atual
+    const zombieCount = 5 + wave * 2;
     
-    requestAnimationFrame(gameLoop);
-}
-
-function update(timestamp) {
-    // Movimento do jogador
-    const moveX = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0);
-    const moveY = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0);
-    
-    const moveLength = Math.sqrt(moveX * moveX + moveY * moveY);
-    const normalizedX = moveLength > 0 ? moveX / moveLength : 0;
-    const normalizedY = moveLength > 0 ? moveY / moveLength : 0;
-    
-    player.x += normalizedX * player.speed;
-    player.y += normalizedY * player.speed;
-    
-    // Câmera
-    cameraOffset.x = player.x - canvas.width / 2;
-    cameraOffset.y = player.y - canvas.height / 2;
-    
-    // Spawn de zumbis
-    if (timestamp - lastZombieSpawn > zombieSpawnRate && zombies.length < zombiesPerWave * 3) {
-        spawnZombieWave();
-        lastZombieSpawn = timestamp;
-    }
-    
-    // Atualiza zumbis
-    zombies.forEach(zombie => {
-        const dx = player.x - zombie.x;
-        const dy = player.y - zombie.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance > 0) {
-            zombie.x += (dx / distance) * zombie.speed;
-            zombie.y += (dy / distance) * zombie.speed;
-            zombie.direction = Math.atan2(dy, dx);
+    // Spawna zumbis em intervalos regulares
+    let zombiesSpawned = 0;
+    zombieSpawnInterval = setInterval(() => {
+        if (zombiesSpawned < zombieCount) {
+            spawnZombie();
+            zombiesSpawned++;
+        } else {
+            clearInterval(zombieSpawnInterval);
         }
-        
-        // Colisão com jogador
-        if (distance < PLAYER_SIZE / 2 + ZOMBIE_SIZE / 2) {
-            player.health -= 0.8;
-            zombie.x -= (dx / distance) * 5;
-            zombie.y -= (dy / distance) * 5;
-            
-            if (player.health <= 0) {
-                gameOver = true;
-                setTimeout(() => {
-                    alert(`FIM DE JOGO!\nNível: ${player.level}\nZumbis mortos: ${player.kills}\nTempo: ${formatTime(gameTime)}`);
-                    resetGame();
-                }, 100);
-            }
-        }
-    });
-    
-    // Remove zumbis mortos
-    zombies = zombies.filter(z => z.health > 0);
-    
-    // Atualiza projéteis
-    bullets.forEach(bullet => {
-        bullet.x += bullet.dx * bullet.speed;
-        bullet.y += bullet.dy * bullet.speed;
-        bullet.lifetime -= 16;
-    });
-    
-    bullets = bullets.filter(b => b.lifetime > 0);
-    
-    // Atualiza bolas de fogo
-    fireballs.forEach(fireball => {
-        fireball.x += fireball.dx * fireball.speed;
-        fireball.y += fireball.dy * fireball.speed;
-        fireball.lifetime -= 16;
-    });
-    
-    fireballs = fireballs.filter(f => f.lifetime > 0);
-    
-    // Verifica colisões
-    checkCollisions();
-    
-    // Atualiza orbes de XP
-    updateXpOrbs();
-    
-    // Atualiza tempo e dificuldade
-    if (!gamePaused) {
-        gameTime += 16;
-        
-        if (gameTime - lastWaveIncrease > 120000) {
-            wave++;
-            lastWaveIncrease = gameTime;
-            zombiesPerWave += 5 + Math.floor(wave / 2);
-            zombieSpeed += 0.15;
-            zombieHealth += 8;
-            zombieSpawnRate = Math.max(100, zombieSpawnRate - 50);
-        }
-    }
-    
-    updateUI();
+    }, 1000);
 }
 
-function checkCollisions() {
-    // Colisões de projéteis
-    bullets.forEach(bullet => {
-        zombies.forEach(zombie => {
-            const dx = zombie.x - bullet.x;
-            const dy = zombie.y - bullet.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < ZOMBIE_SIZE / 2 + BULLET_SIZE / 2) {
-                zombie.health -= bullet.damage;
-                bullet.lifetime = 0;
-                
-                if (bullet.isLightning) {
-                    lightningStrike(zombie.x, zombie.y);
-                }
-                
-                if (zombie.health <= 0) {
-                    spawnXpOrb(zombie.x, zombie.y, 15);
-                    player.kills++;
-                    player.xp += 15;
-                    checkLevelUp();
-                }
-            }
-        });
-    });
-    
-    // Colisões de bolas de fogo
-    fireballs.forEach(fireball => {
-        zombies.forEach(zombie => {
-            const dx = zombie.x - fireball.x;
-            const dy = zombie.y - fireball.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < ZOMBIE_SIZE / 2 + FIREBALL_SIZE / 2) {
-                zombie.health -= fireball.damage;
-                zombie.burning = true;
-                zombie.burnTime = 1500;
-                fireball.lifetime = 0;
-                
-                if (zombie.health <= 0) {
-                    spawnXpOrb(zombie.x, zombie.y, 15);
-                    player.kills++;
-                    player.xp += 15;
-                    checkLevelUp();
-                }
-            }
-        });
-    });
-    
-    // Zumbis queimando
-    zombies.forEach(zombie => {
-        if (zombie.burning) {
-            zombie.burnTime -= 16;
-            zombie.health -= 0.8;
-            
-            if (zombie.burnTime <= 0) {
-                zombie.burning = false;
-            }
-            
-            if (zombie.health <= 0) {
-                spawnXpOrb(zombie.x, zombie.y, 15);
-                player.kills++;
-                player.xp += 15;
-                checkLevelUp();
-            }
-        }
-    });
-    
-    // Raios
-    lightningStrikes.forEach(lightning => {
-        if (lightning.lifetime <= 0) {
-            zombies.forEach(zombie => {
-                const dx = zombie.x - lightning.x;
-                const dy = zombie.y - lightning.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance < LIGHTNING_RADIUS) {
-                    zombie.health -= lightning.damage * (1 - distance / LIGHTNING_RADIUS);
-                    
-                    if (zombie.health <= 0) {
-                        spawnXpOrb(zombie.x, zombie.y, 15);
-                        player.kills++;
-                        player.xp += 15;
-                        checkLevelUp();
-                    }
-                }
-            });
-        }
-    });
-    
-    lightningStrikes = lightningStrikes.filter(l => l.lifetime > 0);
-}
-
-function spawnZombieWave() {
-    const count = 3 + Math.floor(wave * 1.5);
-    for (let i = 0; i < count; i++) {
-        setTimeout(() => {
-            const angle = Math.random() * Math.PI * 2;
-            const distance = Math.max(canvas.width, canvas.height) * 0.6 + Math.random() * 200;
-            const x = player.x + Math.cos(angle) * distance;
-            const y = player.y + Math.sin(angle) * distance;
-            
-            zombies.push({
-                x: x,
-                y: y,
-                speed: zombieSpeed * (0.9 + Math.random() * 0.3),
-                health: zombieHealth * (0.8 + Math.random() * 0.5),
-                maxHealth: zombieHealth,
-                burning: false,
-                burnTime: 0,
-                direction: 0
-            });
-        }, i * 300);
-    }
-}
-
-function spawnXpOrb(x, y, value) {
-    xpOrbs.push({
-        x: x,
-        y: y,
-        value: value
-    });
-}
-
-function shoot() {
-    const now = Date.now();
-    if (now - lastShot < shootDelay) return;
-    lastShot = now;
-    
-    if (zombies.length === 0) return;
-    
-    if (player.powers.multishot) {
-        // Tiro múltiplo (3 zumbis mais próximos)
-        const targets = [...zombies]
-            .sort((a, b) => {
-                const distA = Math.pow(a.x - player.x, 2) + Math.pow(a.y - player.y, 2);
-                const distB = Math.pow(b.x - player.x, 2) + Math.pow(b.y - player.y, 2);
-                return distA - distB;
-            })
-            .slice(0, 3);
-        
-        targets.forEach(target => {
-            const dx = target.x - player.x;
-            const dy = target.y - player.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            
-            bullets.push({
-                x: player.x,
-                y: player.y,
-                dx: dx / dist,
-                dy: dy / dist,
-                speed: 6,
-                damage: 12,
-                lifetime: 1200,
-                isLightning: player.powers.lightning
-            });
-        });
-    } else if (player.powers.fire) {
-        // Bola de fogo
-        const target = zombies.reduce((closest, zombie) => {
-            const dist = Math.pow(zombie.x - player.x, 2) + Math.pow(zombie.y - player.y, 2);
-            return dist < closest.dist ? { zombie, dist } : closest;
-        }, { zombie: zombies[0], dist: Infinity }).zombie;
-        
-        const dx = target.x - player.x;
-        const dy = target.y - player.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        fireballs.push({
-            x: player.x,
-            y: player.y,
-            dx: dx / dist,
-            dy: dy / dist,
-            speed: 5,
-            damage: 25,
-            lifetime: 1500
-        });
-    } else {
-        // Tiro normal ou de raio
-        const target = zombies.reduce((closest, zombie) => {
-            const dist = Math.pow(zombie.x - player.x, 2) + Math.pow(zombie.y - player.y, 2);
-            return dist < closest.dist ? { zombie, dist } : closest;
-        }, { zombie: zombies[0], dist: Infinity }).zombie;
-        
-        const dx = target.x - player.x;
-        const dy = target.y - player.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        bullets.push({
-            x: player.x,
-            y: player.y,
-            dx: dx / dist,
-            dy: dy / dist,
-            speed: player.powers.lightning ? 8 : 7,
-            damage: player.powers.lightning ? 30 : 20,
-            lifetime: 1200,
-            isLightning: player.powers.lightning
-        });
-    }
-}
-
-function lightningStrike(x, y) {
-    lightningStrikes.push({
-        x: x,
-        y: y,
-        damage: 40,
-        lifetime: 600
-    });
-}
-
-function updateXpOrbs() {
-    xpOrbs.forEach((orb, index) => {
-        const dx = player.x - orb.x;
-        const dy = player.y - orb.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < 150) {
-            const speed = 3 + (1 - distance / 150) * 5;
-            orb.x += (dx / distance) * speed;
-            orb.y += (dy / distance) * speed;
-        }
-        
-        if (distance < PLAYER_SIZE / 2 + XP_ORB_SIZE / 2) {
-            player.xp += orb.value;
-            xpOrbs.splice(index, 1);
-            checkLevelUp();
-        }
-    });
-}
-
-function checkLevelUp() {
-    if (player.xp >= player.nextLevelXp) {
-        player.level++;
-        player.xp -= player.nextLevelXp;
-        player.nextLevelXp = Math.floor(player.nextLevelXp * 1.25);
-        
-        if (player.level % 5 === 0) {
-            showPowerupCards();
-        }
-    }
-}
-
-function showPowerupCards() {
-    gamePaused = true;
-    document.getElementById('powerupLevel').textContent = player.level;
-    document.getElementById('powerupScreen').style.display = 'flex';
-}
-
-function selectPowerup(e) {
-    const power = e.currentTarget.getAttribute('data-power');
-    
-    switch (power) {
-        case 'lightning':
-            player.powers.lightning = true;
-            break;
-        case 'fire':
-            player.powers.fire = true;
-            break;
-        case 'multishot':
-            player.powers.multishot = true;
-            break;
-    }
-    
-    document.getElementById('powerupScreen').style.display = 'none';
-    gamePaused = false;
-}
-
-function draw() {
-    ctx.save();
-    ctx.translate(-cameraOffset.x, -cameraOffset.y);
-    
-    // Desenha grade de fundo
-    drawBackground();
-    
-    // Desenha orbes de XP
-    xpOrbs.forEach(orb => {
-        ctx.beginPath();
-        ctx.arc(orb.x, orb.y, XP_ORB_SIZE, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + Math.sin(Date.now() / 200) * 0.3})`;
-        ctx.fill();
-    });
-    
-    // Desenha zumbis
-    zombies.forEach(zombie => {
-        ctx.save();
-        ctx.translate(zombie.x, zombie.y);
-        ctx.rotate(zombie.direction);
-        
-        // Corpo
-        ctx.beginPath();
-        ctx.arc(0, 0, ZOMBIE_SIZE * 0.9, 0, Math.PI * 2);
-        ctx.fillStyle = zombie.burning ? '#f80' : '#0a0';
-        ctx.fill();
-        
-        // Olhos
-        ctx.beginPath();
-        ctx.arc(-10, -8, 5, 0, Math.PI * 2);
-        ctx.arc(10, -8, 5, 0, Math.PI * 2);
-        ctx.fillStyle = '#f00';
-        ctx.fill();
-        
-        // Boca
-        ctx.beginPath();
-        ctx.arc(0, 10, 10, 0, Math.PI);
-        ctx.strokeStyle = '#800';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        
-        ctx.restore();
-        
-        // Barra de vida
-        const healthPercent = zombie.health / zombie.maxHealth;
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
-        ctx.fillRect(zombie.x - ZOMBIE_SIZE, zombie.y - ZOMBIE_SIZE - 15, ZOMBIE_SIZE * 2, 5);
-        ctx.fillStyle = healthPercent > 0.6 ? 'rgba(0, 255, 0, 0.7)' : 
-                         healthPercent > 0.3 ? 'rgba(255, 165, 0, 0.7)' : 'rgba(255, 0, 0, 0.7)';
-        ctx.fillRect(zombie.x - ZOMBIE_SIZE, zombie.y - ZOMBIE_SIZE - 15, ZOMBIE_SIZE * 2 * healthPercent, 5);
-    });
-    
-    // Desenha projéteis
-    bullets.forEach(bullet => {
-        ctx.beginPath();
-        ctx.arc(bullet.x, bullet.y, BULLET_SIZE, 0, Math.PI * 2);
-        ctx.fillStyle = bullet.isLightning ? '#4af' : '#ff0';
-        ctx.fill();
-    });
-    
-    // Desenha bolas de fogo
-    fireballs.forEach(fireball => {
-        const gradient = ctx.createRadialGradient(
-            fireball.x, fireball.y, 0,
-            fireball.x, fireball.y, FIREBALL_SIZE
-        );
-        gradient.addColorStop(0, '#ff0');
-        gradient.addColorStop(0.5, '#f80');
-        gradient.addColorStop(1, '#f00');
-        
-        ctx.beginPath();
-        ctx.arc(fireball.x, fireball.y, FIREBALL_SIZE, 0, Math.PI * 2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
-    });
-    
-    // Desenha raios
-    lightningStrikes.forEach(lightning => {
-        if (lightning.lifetime > 0) {
-            const radius = LIGHTNING_RADIUS * (1 - lightning.lifetime / 600);
-            const gradient = ctx.createRadialGradient(
-                lightning.x, lightning.y, 0,
-                lightning.x, lightning.y, radius
-            );
-            gradient.addColorStop(0, 'rgba(100, 200, 255, 0.9)');
-            gradient.addColorStop(1, 'rgba(100, 200, 255, 0)');
-            
-            ctx.beginPath();
-            ctx.arc(lightning.x, lightning.y, radius, 0, Math.PI * 2);
-            ctx.fillStyle = gradient;
-            ctx.fill();
-        }
-    });
-    
-    // Desenha jogador
-    ctx.save();
-    ctx.translate(player.x, player.y);
-    ctx.rotate(player.direction);
-    
-    // Corpo
-    ctx.beginPath();
-    ctx.arc(0, 0, PLAYER_SIZE * 0.9, 0, Math.PI * 2);
-    ctx.fillStyle = '#07f';
-    ctx.fill();
-    
-    // Olhos
-    ctx.beginPath();
-    ctx.arc(-12, -10, 8, 0, Math.PI * 2);
-    ctx.arc(12, -10, 8, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff';
-    ctx.fill();
-    
-    ctx.beginPath();
-    ctx.arc(-10, -10, 4, 0, Math.PI * 2);
-    ctx.arc(14, -10, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#000';
-    ctx.fill();
-    
-    // Boca
-    ctx.beginPath();
-    ctx.arc(0, 10, 10, 0, Math.PI, true);
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    
-    ctx.restore();
-    
-    // Barra de vida do jogador
-    const healthPercent = player.health / player.maxHealth;
-    ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
-    ctx.fillRect(player.x - PLAYER_SIZE, player.y - PLAYER_SIZE - 20, PLAYER_SIZE * 2, 8);
-    ctx.fillStyle = healthPercent > 0.6 ? 'rgba(0, 255, 0, 0.7)' : 
-                     healthPercent > 0.3 ? 'rgba(255, 165, 0, 0.7)' : 'rgba(255, 0, 0, 0.7)';
-    ctx.fillRect(player.x - PLAYER_SIZE, player.y - PLAYER_SIZE - 20, PLAYER_SIZE * 2 * healthPercent, 8);
-    
-    // Sombra
-    ctx.beginPath();
-    ctx.ellipse(player.x, player.y + PLAYER_SIZE + 5, PLAYER_SIZE * 0.8, PLAYER_SIZE * 0.3, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-    ctx.fill();
-    
-    ctx.restore();
-    
-    // Efeito de pausa
-    if (gamePaused) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-}
-
-function drawBackground() {
-    const gridSize = 100;
-    const startX = Math.floor(cameraOffset.x / gridSize) * gridSize;
-    const startY = Math.floor(cameraOffset.y / gridSize) * gridSize;
-    
-    ctx.strokeStyle = 'rgba(50, 50, 50, 0.3)';
-    ctx.lineWidth = 1;
-    
-    for (let x = startX; x < startX + canvas.width + gridSize; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x - cameraOffset.x, 0);
-        ctx.lineTo(x - cameraOffset.x, canvas.height);
-        ctx.stroke();
-    }
-    
-    for (let y = startY; y < startY + canvas.height + gridSize; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y - cameraOffset.y);
-        ctx.lineTo(canvas.width, y - cameraOffset.y);
-        ctx.stroke();
-    }
-}
-
-function updateUI() {
-    document.getElementById('level').textContent = player.level;
-    document.getElementById('xp').textContent = player.xp;
-    document.getElementById('nextLevelXp').textContent = player.nextLevelXp;
-    document.getElementById('health').textContent = Math.floor(player.health);
-    document.getElementById('wave').textContent = wave;
-    document.getElementById('zombieCount').textContent = zombies.length;
-    document.getElementById('time').textContent = formatTime(gameTime);
-}
-
-function formatTime(ms) {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
-function resetGame() {
-    player = {
-        x: canvas.width / 2,
-        y: canvas.height / 2,
-        speed: 3.5,
-        health: 100,
-        maxHealth: 100,
-        level: 1,
-        xp: 0,
-        nextLevelXp: 100,
-        kills: 0,
-        powers: {
-            multishot: false,
-            fire: false,
-            lightning: false
-        },
-        direction: 0
+// Cria um novo zumbi em uma posição aleatória fora da tela
+function spawnZombie() {
+    const zombie = {
+        x: 0,
+        y: 0,
+        width: 30,
+        height: 30,
+        speed: 1 + wave * 0.1,
+        health: 50 + wave * 10
     };
-    zombies = [];
-    xpOrbs = [];
-    bullets = [];
-    fireballs = [];
-    lightningStrikes = [];
-    wave = 1;
-    gameTime = 0;
-    lastWaveIncrease = 0;
-    zombieSpeed = 1.2;
-    zombieHealth = 40;
-    zombiesPerWave = 15;
-    zombieSpawnRate = 800;
-    gameOver = false;
-    gamePaused = false;
     
-    document.getElementById('powerupScreen').style.display = 'none';
+    // Posiciona o zumbi fora da tela em um dos lados
+    const side = Math.floor(Math.random() * 4);
+    
+    switch (side) {
+        case 0: // Topo
+            zombie.x = Math.random() * window.innerWidth;
+            zombie.y = -30;
+            break;
+        case 1: // Direita
+            zombie.x = window.innerWidth + 30;
+            zombie.y = Math.random() * window.innerHeight;
+            break;
+        case 2: // Baixo
+            zombie.x = Math.random() * window.innerWidth;
+            zombie.y = window.innerHeight + 30;
+            break;
+        case 3: // Esquerda
+            zombie.x = -30;
+            zombie.y = Math.random() * window.innerHeight;
+            break;
+    }
+    
+    zombies.push(zombie);
+    
+    // Cria o elemento HTML do zumbi
+    const zombieElement = document.createElement('div');
+    zombieElement.className = 'zombie';
+    zombieElement.style.left = `${zombie.x}px`;
+    zombieElement.style.top = `${zombie.y}px`;
+    document.getElementById('game-container').appendChild(zombieElement);
 }
 
-// Inicia o jogo
-window.onload = init;
+// Atira uma bala na direção do mouse
+function shoot(e) {
+    if (!gameRunning || gameOver) return;
+    
+    // Calcula a direção da bala
+    const angle = Math.atan2(
+        e.clientY - (player.y + player.height / 2),
+        e.clientX - (player.x + player.width / 2)
+    );
+    
+    const bullet = {
+        x: player.x + player.width / 2 - 5,
+        y: player.y + player.height / 2 - 5,
+        width: 10,
+        height: 10,
+        speed: 10,
+        dx: Math.cos(angle) * 10,
+        dy: Math.sin(angle) * 10
+    };
+    
+    bullets.push(bullet);
+    
+    // Cria o elemento HTML da bala
+    const bulletElement = document.createElement('div');
+    bulletElement.className = 'bullet';
+    bulletElement.style.left = `${bullet.x}px`;
+    bulletElement.style.top = `${bullet.y}px`;
+    document.getElementById('game-container').appendChild(bulletElement);
+}
+
+// Atualiza o estado do jogo
+function update() {
+    if (!gameRunning || gameOver) return;
+    
+    // Movimentação do jogador
+    if (keys['ArrowUp'] || keys['w']) player.y -= player.speed;
+    if (keys['ArrowDown'] || keys['s']) player.y += player.speed;
+    if (keys['ArrowLeft'] || keys['a']) player.x -= player.speed;
+    if (keys['ArrowRight'] || keys['d']) player.x += player.speed;
+    
+    // Limita o jogador dentro da tela
+    player.x = Math.max(0, Math.min(window.innerWidth - player.width, player.x));
+    player.y = Math.max(0, Math.min(window.innerHeight - player.height, player.y));
+    
+    // Atualiza posição do jogador na tela
+    playerElement.style.left = `${player.x}px`;
+    playerElement.style.top = `${player.y}px`;
+    
+    // Movimenta e verifica colisão das balas
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        const bullet = bullets[i];
+        bullet.x += bullet.dx;
+        bullet.y += bullet.dy;
+        
+        // Remove balas que saíram da tela
+        if (bullet.x < 0 || bullet.x > window.innerWidth || 
+            bullet.y < 0 || bullet.y > window.innerHeight) {
+            bullets.splice(i, 1);
+            document.querySelectorAll('.bullet')[i].remove();
+            continue;
+        }
+        
+        // Atualiza posição da bala na tela
+        document.querySelectorAll('.bullet')[i].style.left = `${bullet.x}px`;
+        document.querySelectorAll('.bullet')[i].style.top = `${bullet.y}px`;
+        
+        // Verifica colisão com zumbis
+        for (let j = zombies.length - 1; j >= 0; j--) {
+            const zombie = zombies[j];
+            if (checkCollision(bullet, zombie)) {
+                zombie.health -= 25;
+                
+                // Remove zumbi se a vida acabar
+                if (zombie.health <= 0) {
+                    zombies.splice(j, 1);
+                    document.querySelectorAll('.zombie')[j].remove();
+                    kills++;
+                    updateStats();
+                }
+                
+                // Remove a bala
+                bullets.splice(i, 1);
+                document.querySelectorAll('.bullet')[i].remove();
+                break;
+            }
+        }
+    }
+    
+    // Movimenta zumbis em direção ao jogador
+    for (let i = 0; i < zombies.length; i++) {
+        const zombie = zombies[i];
+        
+        // Calcula direção para o jogador
+        const dx = (player.x + player.width / 2) - (zombie.x + zombie.width / 2);
+        const dy = (player.y + player.height / 2) - (zombie.y + zombie.height / 2);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Normaliza e multiplica pela velocidade
+        zombie.x += (dx / distance) * zombie.speed;
+        zombie.y += (dy / distance) * zombie.speed;
+        
+        // Atualiza posição do zumbi na tela
+        document.querySelectorAll('.zombie')[i].style.left = `${zombie.x}px`;
+        document.querySelectorAll('.zombie')[i].style.top = `${zombie.y}px`;
+        
+        // Verifica colisão com o jogador
+        if (checkCollision(player, zombie)) {
+            player.health -= 0.5;
+            updateStats();
+            
+            // Game over se a vida acabar
+            if (player.health <= 0) {
+                endGame();
+                break;
+            }
+        }
+    }
+    
+    // Verifica se todos os zumbis foram mortos para iniciar nova onda
+    if (zombies.length === 0 && gameRunning && !gameOver) {
+        wave++;
+        updateStats();
+        startWave();
+    }
+    
+    // Continua o loop de atualização
+    requestAnimationFrame(update);
+}
+
+// Verifica colisão entre dois objetos
+function checkCollision(obj1, obj2) {
+    return obj1.x < obj2.x + obj2.width &&
+           obj1.x + obj1.width > obj2.x &&
+           obj1.y < obj2.y + obj2.height &&
+           obj1.y + obj1.height > obj2.y;
+}
+
+// Finaliza o jogo
+function endGame() {
+    gameOver = true;
+    gameRunning = false;
+    gameOverElement.style.display = 'block';
+}
+
+// Event listeners
+document.addEventListener('keydown', (e) => {
+    keys[e.key] = true;
+});
+
+document.addEventListener('keyup', (e) => {
+    keys[e.key] = false;
+});
+
+document.addEventListener('mousedown', shoot);
+
+startButton.addEventListener('click', () => {
+    startScreen.style.display = 'none';
+    initGame();
+    update();
+});
+
+restartButton.addEventListener('click', () => {
+    // Remove todos os zumbis e balas
+    document.querySelectorAll('.zombie').forEach(z => z.remove());
+    document.querySelectorAll('.bullet').forEach(b => b.remove());
+    
+    initGame();
+    update();
+});
+
+// Inicia a tela inicial
+startScreen.style.display = 'flex';

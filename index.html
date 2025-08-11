@@ -1,48 +1,28 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zumbi Apocalipse</title>
+    <title>Zombie Survival</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="game-container">
-        <canvas id="gameCanvas"></canvas>
-        <div class="ui">
-            <div class="stats">
-                <div>Nível: <span id="level">1</span></div>
-                <div>XP: <span id="xp">0</span>/<span id="nextLevelXp">100</span></div>
-                <div>Vida: <span id="health">100</span></div>
-                <div>Onda: <span id="wave">1</span></div>
-                <div>Zumbis: <span id="zombieCount">0</span></div>
-                <div>Tempo: <span id="time">0:00</span></div>
-            </div>
-            <div class="powerup-screen" id="powerupScreen">
-                <div class="powerup-cards">
-                    <h3>ESCOLHA SEU PODER <span id="powerupLevel">5</span></h3>
-                    <div class="cards">
-                        <div class="card" data-power="lightning">
-                            <div class="icon">⚡</div>
-                            <h4>Raio Mortal</h4>
-                            <p>Dano elétrico que atinge vários zumbis</p>
-                        </div>
-                        <div class="card" data-power="fire">
-                            <div class="icon">🔥</div>
-                            <h4>Inferno</h4>
-                            <p>Bolas de fogo que queimam grupos</p>
-                        </div>
-                        <div class="card" data-power="multishot">
-                            <div class="icon">🎯</div>
-                            <h4>Rajada</h4>
-                            <p>Dispara em múltiplos alvos</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div id="game-container">
+        <div id="player"></div>
+        <div id="stats">
+            <div id="health">Vida: 100</div>
+            <div id="wave">Onda: 1</div>
+            <div id="kills">Zumbis Mortos: 0</div>
+        </div>
+        <div id="game-over">GAME OVER<br><button id="restart">Reiniciar</button></div>
+        <div id="start-screen">
+            <h1>Zombie Survival</h1>
+            <p>Sobreviva ao maior tempo possível contra ondas de zumbis!</p>
+            <p>Use as teclas W, A, S, D ou as setas para se mover</p>
+            <p>Clique com o mouse para atirar</p>
+            <button id="start-button">Começar</button>
         </div>
     </div>
-
-    <script src="script.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>

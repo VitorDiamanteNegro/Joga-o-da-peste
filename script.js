@@ -555,6 +555,10 @@ function draw() {
     ctx.save();
     ctx.translate(-cameraOffset.x, -cameraOffset.y);
     
+    // Resetar sombras
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
+    
     // Fundo (opcional)
     drawBackground();
     
@@ -697,6 +701,10 @@ function draw() {
     ctx.ellipse(player.x, player.y + PLAYER_SIZE + 5, PLAYER_SIZE * 0.8, PLAYER_SIZE * 0.3, 0, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.fill();
+    
+    // Resetar sombras
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
     
     ctx.restore();
     
